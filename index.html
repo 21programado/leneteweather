@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meteo Montevideo</title>
+
+  <!-- PWA Meta Tags & Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Meteo MVD">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* Header */
+    header {
+      background-color: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      padding: 12px 16px;
+    }
+
+    .header-content {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand h1 {
+      font-size: 1.125rem;
+      font-weight: 700;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-icon {
+      background-color: rgba(51, 65, 85, 0.6);
+      border: none;
+      color: #cbd5e1;
+      padding: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    .btn-icon:hover {
+      background-color: #334155;
+      color: #ffffff;
+    }
+
+    /* Main Content */
+    main {
+      max-width: 800px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex-grow: 1;
+    }
+
+    /* Tarjeta Clima Principal */
+    .card-main {
+      background: linear-gradient(135deg, #0284c7 0%, #1e40af 100%);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .location-badge {
+      background-color: rgba(0, 0, 0, 0.2);
+      font-size: 0.75rem;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .condition-text {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+
+    .update-time {
+      font-size: 0.75rem;
+      color: #bae6fd;
+    }
+
+    .temp-container {
+      margin: 24px 0;
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+    }
+
+    .current-temp {
+      font-size: 3.75rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .temp-details {
+      font-size: 0.875rem;
+      color: #e0f2fe;
+    }
+
+    .grid-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    @media (min-width: 640px) {
+      .grid-metrics {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .metric-item {
+      background-color: rgba(0, 0, 0, 0.15);
+      padding: 10px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .metric-item p:first-child {
+      font-size: 0.75rem;
+      color: #bae6fd;
+    }
+
+    .metric-item p:last-child {
+      font-weight: 700;
+      font-size: 0.875rem;
+    }
+
+    /* Secciones generales */
+    .section-card {
+      background-color: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .section-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Horas Carrusel Corregido */
+    .hourly-carousel {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 12px;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .hourly-carousel::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .hourly-carousel::-webkit-scrollbar-track {
+      background: rgba(51, 65, 85, 0.3);
+      border-radius: 4px;
+    }
+
+    .hourly-carousel::-webkit-scrollbar-thumb {
+      background: rgba(14, 165, 233, 0.5);
+      border-radius: 4px;
+    }
+
+    .hourly-item {
+      background-color: rgba(51, 65, 85, 0.4);
+      flex: 0 0 75px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      text-align: center;
+    }
+
+    .hourly-time { font-size: 0.75rem; color: #94a3b8; }
+    .hourly-icon { font-size: 1.25rem; margin: 4px 0; }
+    .hourly-temp { font-weight: 700; font-size: 0.875rem; }
+    .hourly-rain { font-size: 0.625rem; color: #38bdf8; margin-top: 4px; }
+
+    /* Dias Lista */
+    .weekly-list {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .weekly-item {
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .weekly-item:last-child {
+      border-bottom: none;
+    }
+
+    .day-name {
+      width: 110px;
+      text-transform: capitalize;
+      font-weight: 500;
+      color: #cbd5e1;
+    }
+
+    .day-temps {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 110px;
+      justify-content: flex-end;
+    }
+
+    /* Animación Giro */
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .spin {
+      animation: spin 0.8s linear infinite;
+    }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 0.75rem;
+      color: #64748b;
+      border-top: 1px solid #1e293b;
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body id="body-app">
+
+  <!-- Header -->
+  <header>
+    <div class="header-content">
+      <div class="brand">
+        <i data-lucide="cloud-sun" style="color: #38bdf8; width: 28px; height: 28px;"></i>
+        <h1>Lenete Weather Montevideo</h1>
+      </div>
+      <div class="controls">
+        <button id="btn-refresh" onclick="cargarClima()" class="btn-icon" title="Actualizar datos">
+          <i id="icon-refresh" data-lucide="rotate-cw" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+
+    <!-- Tarjeta Clima Actual -->
+    <section class="card-main">
+      <div class="card-header">
+        <div>
+          <span class="location-badge">Montevideo, Uruguay</span>
+          <h2 id="current-condition" class="condition-text">Cargando estado...</h2>
+        </div>
+        <span id="update-time" class="update-time">Actualizando...</span>
+      </div>
+
+      <div class="temp-container">
+        <span id="current-temp" class="current-temp">--°</span>
+        <div class="temp-details">
+          <p id="apparent-temp">Sensación: --°</p>
+          <p id="temp-max-min">Máx: --° / Mín: --°</p>
+        </div>
+      </div>
+
+      <div class="grid-metrics">
+        <div class="metric-item">
+          <i data-lucide="wind" style="color: #7dd3fc; width: 20px; height: 20px;"></i>
+          <div>
+            <p>Viento</p>
+            <p id="wind-speed">-- km/h</p>
+          </div>
+        </div>
+        <div class="metric-item">
+          <i data-lucide="droplets" style="color: #7dd3fc; width: 20px; height: 20px;"></i>
+          <div>
+            <p>Humedad</p>
+            <p id="humidity">--%</p>
+          </div>
+        </div>
+        <div class="metric-item">
+          <i data-lucide="cloud-rain" style="color: #7dd3fc; width: 20px; height: 20px;"></i>
+          <div>
+            <p>Precipitación</p>
+            <p id="precipitation">-- mm</p>
+          </div>
+        </div>
+        <div class="metric-item">
+          <i data-lucide="gauge" style="color: #7dd3fc; width: 20px; height: 20px;"></i>
+          <div>
+            <p>Presión</p>
+            <p id="pressure">-- hPa</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pronóstico por Horas -->
+    <section class="section-card">
+      <div class="section-title">
+        <i data-lucide="clock" style="width: 16px; height: 16px;"></i>
+        <span>Pronóstico Próximas Horas</span>
+      </div>
+      <div id="hourly-container" class="hourly-carousel">
+        <p style="font-size: 0.875rem; color: #94a3b8;">Cargando horas...</p>
+      </div>
+    </section>
+
+    <!-- Pronóstico Extendidos 7 Días -->
+    <section class="section-card">
+      <div class="section-title">
+        <i data-lucide="calendar" style="width: 16px; height: 16px;"></i>
+        <span>Pronóstico para los próximos días</span>
+      </div>
+      <div id="weekly-container" class="weekly-list">
+        <p style="font-size: 0.875rem; color: #94a3b8;">Cargando días...</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    Desarrollado por Lenete App • Datos meteorológicos vía Open-Meteo
+  </footer>
+
+  <script>
+    const lat = -34.9011;
+    const lon = -56.1645;
+
+    function traducirCodigoClima(codigo) {
+      const mapa = {
+        0: "☀️ Despejado",
+        1: "🌤️ Mayormente despejado",
+        2: "⛅ Parcialmente nublado",
+        3: "☁️ Nublado",
+        45: "🌫️ Neblina",
+        48: "🌫️ Niebla escarchada",
+        51: "🌧️ Llovizna ligera",
+        53: "🌧️ Llovizna moderada",
+        55: "🌧️ Llovizna densa",
+        61: "🌧️ Lluvia ligera",
+        63: "🌧️ Lluvia moderada",
+        65: "🌧️ Lluvia fuerte",
+        71: "❄️ Nieve ligera",
+        80: "🌦️ Chubascos",
+        95: "⚡ Tormenta eléctrica"
+      };
+      return mapa[codigo] || "⛅ Variable";
+    }
+
+    async function cargarClima() {
+      const iconRefresh = document.getElementById('icon-refresh');
+      iconRefresh.classList.add('spin');
+
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,surface_pressure&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=America%2FMontevideo`;
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Error en la llamada a la API");
+
+        const data = await response.json();
+
+        // 1. Clima Actual
+        const cur = data.current;
+        const textoClima = traducirCodigoClima(cur.weather_code);
+        
+        document.getElementById('current-condition').innerText = textoClima;
+        document.getElementById('current-temp').innerText = `${Math.round(cur.temperature_2m)}°`;
+        document.getElementById('apparent-temp').innerText = `Sensación: ${Math.round(cur.apparent_temperature)}°`;
+        document.getElementById('wind-speed').innerText = `${cur.wind_speed_10m} km/h`;
+        document.getElementById('humidity').innerText = `${cur.relative_humidity_2m}%`;
+        document.getElementById('precipitation').innerText = `${cur.precipitation} mm`;
+        document.getElementById('pressure').innerText = `${cur.surface_pressure} hPa`;
+
+        const maxHoy = Math.round(data.daily.temperature_2m_max[0]);
+        const minHoy = Math.round(data.daily.temperature_2m_min[0]);
+        document.getElementById('temp-max-min').innerText = `Máx: ${maxHoy}° / Mín: ${minHoy}°`;
+
+        const ahora = new Date();
+        const horaFormateada = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('update-time').innerText = `Actualizado ${horaFormateada}`;
+
+        // 2. Horas
+        const hourlyContainer = document.getElementById('hourly-container');
+        hourlyContainer.innerHTML = '';
+        const horaActualIndex = new Date().getHours();
+
+        for (let i = horaActualIndex; i < horaActualIndex + 24; i++) {
+          if (i >= data.hourly.time.length) break;
+          const horaStr = new Date(data.hourly.time[i]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const tempH = Math.round(data.hourly.temperature_2m[i]);
+          const codeH = data.hourly.weather_code[i];
+          const probLluvia = data.hourly.precipitation_probability ? data.hourly.precipitation_probability[i] : 0;
+          const emoji = traducirCodigoClima(codeH).split(" ")[0];
+
+          hourlyContainer.innerHTML += `
+            <div class="hourly-item">
+              <span class="hourly-time">${horaStr}</span>
+              <span class="hourly-icon">${emoji}</span>
+              <span class="hourly-temp">${tempH}°</span>
+              <span class="hourly-rain">💧 ${probLluvia}%</span>
+            </div>
+          `;
+        }
+
+        // 3. Pronóstico Semanal
+        const weeklyContainer = document.getElementById('weekly-container');
+        weeklyContainer.innerHTML = '';
+        
+        for (let d = 0; d < data.daily.time.length; d++) {
+          const fechaObj = new Date(data.daily.time[d] + 'T00:00:00');
+          const nombreDia = d === 0 ? 'Hoy' : fechaObj.toLocaleDateString('es-ES', { weekday: 'long' });
+          const maxD = Math.round(data.daily.temperature_2m_max[d]);
+          const minD = Math.round(data.daily.temperature_2m_min[d]);
+          const codeD = data.daily.weather_code[d];
+          const descD = traducirCodigoClima(codeD);
+          const emojiD = descD.split(" ")[0];
+
+          weeklyContainer.innerHTML += `
+            <div class="weekly-item">
+              <span class="day-name">${nombreDia}</span>
+              <span style="font-size: 1.25rem;">${emojiD}</span>
+              <div class="day-temps">
+                <span style="color: #94a3b8; font-size: 0.875rem;">${minD}°</span>
+                <span style="font-weight: 700; font-size: 0.875rem;">${maxD}°</span>
+              </div>
+            </div>
+          `;
+        }
+
+      } catch (error) {
+        console.error("Error al obtener datos:", error);
+        document.getElementById('current-condition').innerText = "Error al obtener clima";
+      } finally {
+        setTimeout(() => {
+          iconRefresh.classList.remove('spin');
+        }, 400);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+      cargarClima();
+
+      // Registro del Service Worker para PWA
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('Service Worker registrado con éxito:', reg.scope))
+          .catch((err) => console.error('Error al registrar Service Worker:', err));
+      }
+    });
+  </script>
+</body>
+</html>
