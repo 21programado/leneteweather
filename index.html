@@ -402,11 +402,14 @@
     const lat = -34.9011;
     const lon = -56.1645;
 
-    function traducirCodigoClima(codigo) {
+function traducirCodigoClima(codigo, hora = 12) {
+      // Determinar si es de noche (de 20:00 a 06:00)
+      const esDeNoche = hora < 6 || hora >= 20;
+
       const mapa = {
-        0: "☀️ Despejado",
-        1: "🌤️ Mayormente despejado",
-        2: "⛅ Parcialmente nublado",
+        0: esDeNoche ? "🌙 Despejado" : "☀️ Despejado",
+        1: esDeNoche ? "☁️ Mayormente nublado" : "🌤️ Mayormente despejado",
+        2: esDeNoche ? "☁️ Parcialmente nublado" : "⛅ Parcialmente nublado",
         3: "☁️ Nublado",
         45: "🌫️ Neblina",
         48: "🌫️ Niebla escarchada",
@@ -460,13 +463,20 @@
         hourlyContainer.innerHTML = '';
         const horaActualIndex = new Date().getHours();
 
-        for (let i = horaActualIndex; i < horaActualIndex + 24; i++) {
+for (let i = horaActualIndex; i < horaActualIndex + 24; i++) {
           if (i >= data.hourly.time.length) break;
-          const horaStr = new Date(data.hourly.time[i]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          
+          const fechaObj = new Date(data.hourly.time[i]);
+          const horaNum = fechaObj.getHours();
+          const horaStr = fechaObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          
           const tempH = Math.round(data.hourly.temperature_2m[i]);
           const codeH = data.hourly.weather_code[i];
           const probLluvia = data.hourly.precipitation_probability ? data.hourly.precipitation_probability[i] : 0;
-          const emoji = traducirCodigoClima(codeH).split(" ")[0];
+          
+          // Le pasamos la hora exacta para que decida si muestra luna o sol
+          const descH = traducirCodigoClima(codeH, horaNum);
+          const emoji = descH.split(" ")[0];
 
           hourlyContainer.innerHTML += `
             <div class="hourly-item">
