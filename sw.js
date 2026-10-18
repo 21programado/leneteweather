@@ -1,62 +1,51 @@
-const CACHE_NAME = 'meteo-montevideo-v1';
-const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icon-192.png',
-  './icon-512.png',
-  'https://unpkg.com/lucide@latest'
-];
+// Service worker de Lenete Weather Montevideo.
+// Guarda la estructura de la app para abrirla rápido y sin conexión.
+// Los datos del clima NUNCA se guardan: siempre vienen de la red.
+const CACHE = 'lenete-weather-v1';
+const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
-// Instalación: Guardar en caché la interfaz estática
-self.addEventListener('install', (event) => {
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    }).then(() => self.skipWaiting())
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
 });
 
-// Activación: Limpieza de cachés antiguas
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
+self.addEventListener('fetch', event => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+
+  // Otros orígenes (API de Open-Meteo, fuentes): se dejan pasar sin cachear.
+  if (url.origin !== self.location.origin) return;
+
+  // Páginas: primero la red (para recibir versiones nuevas), y si falla, la copia guardada.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req)
+        .then(res => {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put('./index.html', copy));
+          return res;
         })
-      );
-    }).then(() => self.clients.claim())
-  );
-});
-
-// Estrategia de peticiones
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-
-  // SI ES LA API DEL CLIMA: Ir directo a la red (no guardar respuesta obsoleta en caché)
-  if (url.hostname.includes('open-meteo.com')) {
-    event.respondWith(fetch(event.request));
+        .catch(() => caches.match('./index.html'))
+    );
     return;
   }
 
-  // PARA EL RESTO DE RECURSOS: Caché con respaldo de red (Cache First)
+  // Archivos propios (íconos, manifest): primero la copia guardada, y se actualiza en segundo plano.
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((networkResponse) => {
-        return caches.open(CACHE_NAME).then((cache) => {
-          // Guardar dinámicamente recursos estáticos
-          if (event.request.method === 'GET') {
-            cache.put(event.request, networkResponse.clone());
-          }
-          return networkResponse;
-        });
-      });
+    caches.match(req).then(cached => {
+      const net = fetch(req).then(res => {
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+        return res;
+      }).catch(() => cached);
+      return cached || net;
     })
   );
 });

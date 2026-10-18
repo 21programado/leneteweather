@@ -1,24 +1,17 @@
 {
-  "name": "Meteo Montevideo",
-  "short_name": "Meteo MVD",
-  "description": "El estado del tiempo en Montevideo en tiempo real",
+  "name": "Lenete Weather Montevideo",
+  "short_name": "Lenete Weather",
+  "description": "Pronóstico de lluvia y temperatura actual en Montevideo.",
+  "lang": "es-UY",
   "start_url": "./index.html",
+  "scope": "./",
+  "id": "./",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
-  "orientation": "portrait-primary",
+  "orientation": "portrait",
+  "background_color": "#e8ecee",
+  "theme_color": "#e8ecee",
   "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }
